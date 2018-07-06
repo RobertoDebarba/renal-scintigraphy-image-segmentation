@@ -4,7 +4,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
-IMG_SRC = 'src.png'
+IMG_SRC = 'renal.png'
 
 
 def main(img_src):
