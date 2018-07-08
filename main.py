@@ -66,22 +66,85 @@ def main(img_src):
     full_img = np.concatenate((src_color_1, src_color_2), 1)
     cv2.imshow("H Med", full_img)
 
-    # TODO Etapa final
-    # mask = np.zeros_like(filtrada1)
-    # cv2.drawContours(mask, contours, 0, 255, -1)
-    # out = np.zeros_like(filtrada1)
-    # out[mask == 255] = filtrada1[mask == 255]
-    #
-    # kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-    # gradient = cv2.morphologyEx(out, cv2.MORPH_GRADIENT, kernel)
-    #
-    # cv2.imshow("Gradient", gradient)
+    # Faz o ajuste da borda através do método Expectation Maximization
+    kidney_border_1 = border(src_processed_1, med1)
+    classification_1 = em_classification(kidney_border_1)
+    kidney_border_2 = border(src_processed_2, med2)
+    classification_2 = em_classification(kidney_border_2)
+
+    # Desenha os contornos pela classificação e junta as imagens
+    src_color_1 = cv2.cvtColor(src_gray_1, cv2.COLOR_GRAY2RGB)
+    src_color_2 = cv2.cvtColor(src_gray_2, cv2.COLOR_GRAY2RGB)
+    cv2.drawContours(src_color_1, [(bigger_contour(classification_1, 1))], 0, (0, 0, 255))
+    cv2.drawContours(src_color_2, [(bigger_contour(classification_2, 1))], 0, (0, 0, 255))
+    full_img = np.concatenate((src_color_1, src_color_2), 1)
+    cv2.imshow("I Otimizado por EM", full_img)
 
     plt.show()
 
     key = cv2.waitKey(0)
     while key != 32:
         key = cv2.waitKey(0)
+
+
+def em_classification(img):
+    """ Obtém o resultado do método de classificação Expectation Maximization como uma imagem binária """
+
+    kidney_border_color = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+    _, kidney_border_thresh = cv2.threshold(img, 1, 255, cv2.THRESH_BINARY)
+
+    # Obtém os pontos da borda para treinar a classificação
+    training_points = []
+    for x in range(len(kidney_border_color)):
+        for y in range(len(kidney_border_color[x])):
+            if kidney_border_thresh[x, y] == 255:
+                training_points.append(kidney_border_color[x, y])
+
+    # Realiza a classificação
+    em = cv2.ml.EM_create()
+    em.setClustersNumber(2)
+    em.trainEM(np.array(training_points))
+
+    # Obtém o resultado da classificação
+
+    # Monta uma nova imagem
+    classification = np.zeros((len(kidney_border_color), len(kidney_border_color[0])), dtype=np.uint8)
+
+    # Alimenta a nova imagem com o resultado da classficicação
+    for x in range(len(kidney_border_color)):
+        for y in range(len(kidney_border_color[x])):
+            retval, probs = em.predict2(kidney_border_color[x, y])
+            classification[x, y] = retval[1]
+
+    # Transforma a nova imagem trocando o valor 1 por 255
+    for x in range(len(kidney_border_color)):
+        for y in range(len(kidney_border_color[x])):
+            if classification[x, y] == 1:
+                classification[x, y] = 255
+
+    return classification
+
+
+def border(img, thresh):
+    """ Obtém a borda do maior elemento da imagem através do operador mofológico gradiente """
+
+    kidney_mask = mask(img, [(bigger_contour(img, thresh))])
+    kidney = element_inside_mask(img, kidney_mask)
+
+    gradient_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
+    kidney_gradient = cv2.morphologyEx(kidney, cv2.MORPH_GRADIENT, gradient_kernel)
+
+    kidney_full_mask = mask(img, [(max_contours(kidney_gradient, 85))[0]])
+    kidney_full = np.zeros_like(img)
+    kidney_full[kidney_full_mask == 255] = img[kidney_full_mask == 255]
+
+    kidney_center_mask = mask(img, [(max_contours(kidney_gradient, 85))[1]])
+    empty_img = np.zeros_like(img)
+    kidney_full[kidney_center_mask == 255] = empty_img[kidney_center_mask == 255]
+
+    kidney_border = kidney_full
+
+    return kidney_border
 
 
 def pre_process(src_gray):
@@ -102,6 +165,24 @@ def pre_process(src_gray):
     blurred2 = cv2.GaussianBlur(closed, (7, 7), 0)
     cv2.imshow("E Blurred", blurred2)
     return blurred2
+
+
+def element_inside_mask(img, mask):
+    """ Obtém a imagem de acordo com a máscara. Os elementos fora da mascara são alterados para preto """
+
+    element = np.zeros_like(img)
+    element[mask == 255] = img[mask == 255]
+
+    return element
+
+
+def mask(img, contour):
+    """ Obtém uma mascara do área dentro do contorno """
+
+    result_mask = np.zeros_like(img)
+    cv2.drawContours(result_mask, contour, 0, 255, -1)
+
+    return result_mask
 
 
 def draw_contours_and_show(img_gray, contours, text, thickness=-1):
@@ -196,6 +277,7 @@ def average_variation(values):
             continue
 
         variation.append(values[i] - values[i - 1])
+
     return reduce(lambda x, y: x + y, variation, 1) / len(variation)
 
 
