@@ -4,7 +4,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
-IMG_SRC = 'samples/sample6.jpeg'
+IMG_SRC = 'samples/sample10.jpeg'
 
 
 def main(img_src):
@@ -19,7 +19,7 @@ def main(img_src):
     """
 
     # Valor de maior intensidade
-    m = 159
+    m = 180
 
     src_gray = cv2.cvtColor(cv2.imread(img_src), cv2.COLOR_BGR2GRAY)
     cv2.imshow("A Original", src_gray)
@@ -67,9 +67,9 @@ def main(img_src):
     cv2.imshow("H Med", full_img)
 
     # Faz o ajuste da borda através do método Expectation Maximization
-    kidney_border_1 = border(src_processed_1, med1)
+    kidney_border_1 = border(src_processed_1, med1, m)
     classification_1 = em_classification(kidney_border_1)
-    kidney_border_2 = border(src_processed_2, med2)
+    kidney_border_2 = border(src_processed_2, med2, m)
     classification_2 = em_classification(kidney_border_2)
 
     # Desenha os contornos pela classificação e junta as imagens
@@ -125,20 +125,20 @@ def em_classification(img):
     return classification
 
 
-def border(img, thresh):
+def border(img, med, m):
     """ Obtém a borda do maior elemento da imagem através do operador mofológico gradiente """
 
-    kidney_mask = mask(img, [(bigger_contour(img, thresh))])
+    kidney_mask = mask(img, [(bigger_contour(img, med))])
     kidney = element_inside_mask(img, kidney_mask)
 
-    gradient_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
+    gradient_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 15))
     kidney_gradient = cv2.morphologyEx(kidney, cv2.MORPH_GRADIENT, gradient_kernel)
 
-    kidney_full_mask = mask(img, [(max_contours(kidney_gradient, 85))[0]])
+    kidney_full_mask = mask(img, [(max_contours(kidney_gradient, 1))[0]])
     kidney_full = np.zeros_like(img)
     kidney_full[kidney_full_mask == 255] = img[kidney_full_mask == 255]
 
-    kidney_center_mask = mask(img, [(max_contours(kidney_gradient, 85))[1]])
+    kidney_center_mask = mask(img, [(max_contours(img, m))[1]])
     empty_img = np.zeros_like(img)
     kidney_full[kidney_center_mask == 255] = empty_img[kidney_center_mask == 255]
 
@@ -213,7 +213,10 @@ def med(img, m):
     b_idx = first_peak(contours_area)
     b_value = contours_b[b_idx]
 
-    mb = contours_b[b_value:b_idx]  # TODO rever esse b_value
+    if b_value > b_idx:
+        b_value = 0
+
+    mb = contours_b[b_value:b_idx]
     return mb[int(len(mb) / 2)], b_value
 
 
