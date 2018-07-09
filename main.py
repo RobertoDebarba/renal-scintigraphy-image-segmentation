@@ -23,78 +23,85 @@ def main(img_src):
     # Valor de maior intensidade
     m = 180
 
-    src_gray = cv2.cvtColor(cv2.imread(img_src), cv2.COLOR_BGR2GRAY)
-    if DEBUG:
-        cv2.imshow("A Original", src_gray)
+    try:
+        src_gray = cv2.cvtColor(cv2.imread(img_src), cv2.COLOR_BGR2GRAY)
+        if DEBUG:
+            cv2.imshow("A Original", src_gray)
 
-    # Pré-processamento
-    src_processed = pre_process(src_gray)
+        # Pré-processamento
+        src_processed = pre_process(src_gray)
 
-    # Encontra os dois maiores picos da imagem, que definem os dois rins
-    b_contours = max_contours(src_processed, m)
-    draw_contours_and_show(src_gray, b_contours, "F Maximos")
+        # Encontra os dois maiores picos da imagem, que definem os dois rins
+        b_contours = max_contours(src_processed, m)
+        draw_contours_and_show(src_gray, b_contours, "F Maximos")
 
-    # noinspection PyTypeChecker
-    center_point_1 = center_point(b_contours[0])
-    # noinspection PyTypeChecker
-    center_point_2 = center_point(b_contours[1])
-    division = (center_point_1[0] + center_point_2[0]) / 2
+        # noinspection PyTypeChecker
+        center_point_1 = center_point(b_contours[0])
+        # noinspection PyTypeChecker
+        center_point_2 = center_point(b_contours[1])
+        division = (center_point_1[0] + center_point_2[0]) / 2
 
-    # Divide a imagem, resultando em uma para cada rim
-    # A partir desse ponto cada rim é processado separadamente
-    src_processed_1 = src_processed[:, :int(division)]
-    src_processed_2 = src_processed[:, int(division):]
-    src_gray_1 = src_gray[:, :int(division)]
-    src_gray_2 = src_gray[:, int(division):]
+        # Divide a imagem, resultando em uma para cada rim
+        # A partir desse ponto cada rim é processado separadamente
+        src_processed_1 = src_processed[:, :int(division)]
+        src_processed_2 = src_processed[:, int(division):]
+        src_gray_1 = src_gray[:, :int(division)]
+        src_gray_2 = src_gray[:, int(division):]
 
-    # Busca a mediana entre o ponto de maior intensidade e o ponto de menor intesidade
-    med1, b1 = med(src_processed_1, m)
-    med2, b2 = med(src_processed_2, m)
+        # Busca a mediana entre o ponto de maior intensidade e o ponto de menor intesidade
+        med1, b1 = med(src_processed_1, m)
+        med2, b2 = med(src_processed_2, m)
 
-    # Busca as bordas do rim pelo valor de b
-    # Desenha os contornos e junta as imagens
-    src_color_1 = cv2.cvtColor(src_gray_1, cv2.COLOR_GRAY2RGB)
-    src_color_2 = cv2.cvtColor(src_gray_2, cv2.COLOR_GRAY2RGB)
-    cv2.drawContours(src_color_1, [(bigger_contour(src_processed_1, b1))], 0, (0, 0, 255))
-    cv2.drawContours(src_color_2, [(bigger_contour(src_processed_2, b2))], 0, (0, 0, 255))
-    full_img = np.concatenate((src_color_1, src_color_2), 1)
-    if DEBUG:
-        cv2.imshow("G Thresh B", full_img)
+        # Busca as bordas do rim pelo valor de b
+        # Desenha os contornos e junta as imagens
+        src_color_1 = cv2.cvtColor(src_gray_1, cv2.COLOR_GRAY2RGB)
+        src_color_2 = cv2.cvtColor(src_gray_2, cv2.COLOR_GRAY2RGB)
+        cv2.drawContours(src_color_1, [(bigger_contour(src_processed_1, b1))], 0, (0, 0, 255))
+        cv2.drawContours(src_color_2, [(bigger_contour(src_processed_2, b2))], 0, (0, 0, 255))
+        full_img = np.concatenate((src_color_1, src_color_2), 1)
+        if DEBUG:
+            cv2.imshow("G Thresh B", full_img)
 
-    # Busca as bordas do rim pelo valor da mediana
-    # Desenha os contornos e junta as imagens
-    src_color_1 = cv2.cvtColor(src_gray_1, cv2.COLOR_GRAY2RGB)
-    src_color_2 = cv2.cvtColor(src_gray_2, cv2.COLOR_GRAY2RGB)
-    cv2.drawContours(src_color_1, [(bigger_contour(src_processed_1, med1))], 0, (0, 0, 255))
-    cv2.drawContours(src_color_2, [(bigger_contour(src_processed_2, med2))], 0, (0, 0, 255))
-    full_img = np.concatenate((src_color_1, src_color_2), 1)
-    if DEBUG:
-        cv2.imshow("H Med", full_img)
+        # Busca as bordas do rim pelo valor da mediana
+        # Desenha os contornos e junta as imagens
+        src_color_1 = cv2.cvtColor(src_gray_1, cv2.COLOR_GRAY2RGB)
+        src_color_2 = cv2.cvtColor(src_gray_2, cv2.COLOR_GRAY2RGB)
+        cv2.drawContours(src_color_1, [(bigger_contour(src_processed_1, med1))], 0, (0, 0, 255))
+        cv2.drawContours(src_color_2, [(bigger_contour(src_processed_2, med2))], 0, (0, 0, 255))
+        full_img = np.concatenate((src_color_1, src_color_2), 1)
+        if DEBUG:
+            cv2.imshow("H Med", full_img)
 
-    # Faz o ajuste da borda através do método Expectation Maximization
-    kidney_border_1 = border(src_processed_1, med1, m)
-    classification_1 = em_classification(kidney_border_1)
-    kidney_border_2 = border(src_processed_2, med2, m)
-    classification_2 = em_classification(kidney_border_2)
+        # Faz o ajuste da borda através do método Expectation Maximization
+        kidney_border_1 = border(src_processed_1, med1, m)
+        classification_1 = em_classification(kidney_border_1)
+        kidney_border_2 = border(src_processed_2, med2, m)
+        classification_2 = em_classification(kidney_border_2)
 
-    # Desenha os contornos pela classificação e junta as imagens
-    src_color_1 = cv2.cvtColor(src_gray_1, cv2.COLOR_GRAY2RGB)
-    src_color_2 = cv2.cvtColor(src_gray_2, cv2.COLOR_GRAY2RGB)
-    cv2.drawContours(src_color_1, [(bigger_contour(classification_1, 1))], 0, (0, 0, 255))
-    cv2.drawContours(src_color_2, [(bigger_contour(classification_2, 1))], 0, (0, 0, 255))
-    full_img = np.concatenate((src_color_1, src_color_2), 1)
-    if DEBUG:
-        cv2.imshow("I Otimizado por EM", full_img)
+        # Desenha os contornos pela classificação e junta as imagens
+        src_color_1 = cv2.cvtColor(src_gray_1, cv2.COLOR_GRAY2RGB)
+        src_color_2 = cv2.cvtColor(src_gray_2, cv2.COLOR_GRAY2RGB)
+        cv2.drawContours(src_color_1, [(bigger_contour(classification_1, 1))], 0, (0, 0, 255))
+        cv2.drawContours(src_color_2, [(bigger_contour(classification_2, 1))], 0, (0, 0, 255))
+        full_img = np.concatenate((src_color_1, src_color_2), 1)
+        if DEBUG:
+            cv2.imshow("I Otimizado por EM", full_img)
 
-    if not DEBUG:
-        cv2.imshow(img_src, full_img)
+        if not DEBUG:
+            cv2.imshow(img_src, full_img)
 
-    if DEBUG:
-        plt.show()
+        if DEBUG:
+            plt.show()
 
-    key = cv2.waitKey(0)
-    while key != 32:
         key = cv2.waitKey(0)
+        while key != 32:
+            key = cv2.waitKey(0)
+
+    except Exception:
+        print("Error")
+
+    finally:
+        cv2.destroyAllWindows()
 
 
 def em_classification(img):
@@ -109,6 +116,9 @@ def em_classification(img):
         for y in range(len(kidney_border_color[x])):
             if kidney_border_thresh[x, y] == 255:
                 training_points.append(kidney_border_color[x, y])
+
+    if len(training_points) == 0:
+        raise Exception
 
     # Realiza a classificação
     em = cv2.ml.EM_create()
@@ -300,7 +310,6 @@ def average_variation(values):
 
 
 if __name__ == '__main__':
-
     for (a, b, files) in walk(IMG_SRC_DIR):
         for filename in files:
             print(IMG_SRC_DIR + '/' + filename)
