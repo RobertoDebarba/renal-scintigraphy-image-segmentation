@@ -1,10 +1,12 @@
 from functools import reduce
+from os import walk
 
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
-IMG_SRC = 'samples/sample10.jpeg'
+IMG_SRC_DIR = 'samples'
+DEBUG = False
 
 
 def main(img_src):
@@ -22,7 +24,8 @@ def main(img_src):
     m = 180
 
     src_gray = cv2.cvtColor(cv2.imread(img_src), cv2.COLOR_BGR2GRAY)
-    cv2.imshow("A Original", src_gray)
+    if DEBUG:
+        cv2.imshow("A Original", src_gray)
 
     # Pré-processamento
     src_processed = pre_process(src_gray)
@@ -55,7 +58,8 @@ def main(img_src):
     cv2.drawContours(src_color_1, [(bigger_contour(src_processed_1, b1))], 0, (0, 0, 255))
     cv2.drawContours(src_color_2, [(bigger_contour(src_processed_2, b2))], 0, (0, 0, 255))
     full_img = np.concatenate((src_color_1, src_color_2), 1)
-    cv2.imshow("G Thresh B", full_img)
+    if DEBUG:
+        cv2.imshow("G Thresh B", full_img)
 
     # Busca as bordas do rim pelo valor da mediana
     # Desenha os contornos e junta as imagens
@@ -64,7 +68,8 @@ def main(img_src):
     cv2.drawContours(src_color_1, [(bigger_contour(src_processed_1, med1))], 0, (0, 0, 255))
     cv2.drawContours(src_color_2, [(bigger_contour(src_processed_2, med2))], 0, (0, 0, 255))
     full_img = np.concatenate((src_color_1, src_color_2), 1)
-    cv2.imshow("H Med", full_img)
+    if DEBUG:
+        cv2.imshow("H Med", full_img)
 
     # Faz o ajuste da borda através do método Expectation Maximization
     kidney_border_1 = border(src_processed_1, med1, m)
@@ -78,9 +83,14 @@ def main(img_src):
     cv2.drawContours(src_color_1, [(bigger_contour(classification_1, 1))], 0, (0, 0, 255))
     cv2.drawContours(src_color_2, [(bigger_contour(classification_2, 1))], 0, (0, 0, 255))
     full_img = np.concatenate((src_color_1, src_color_2), 1)
-    cv2.imshow("I Otimizado por EM", full_img)
+    if DEBUG:
+        cv2.imshow("I Otimizado por EM", full_img)
 
-    plt.show()
+    if not DEBUG:
+        cv2.imshow(img_src, full_img)
+
+    if DEBUG:
+        plt.show()
 
     key = cv2.waitKey(0)
     while key != 32:
@@ -157,13 +167,17 @@ def pre_process(src_gray):
     """
 
     dilated = cv2.dilate(src_gray, cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3)))
-    cv2.imshow("B Dilated", dilated)
+    if DEBUG:
+        cv2.imshow("B Dilated", dilated)
     blurred = cv2.GaussianBlur(dilated, (7, 7), 0)
-    cv2.imshow("C Blurred", blurred)
+    if DEBUG:
+        cv2.imshow("C Blurred", blurred)
     closed = cv2.morphologyEx(blurred, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_RECT, (9, 9)))
-    cv2.imshow("D Closed", closed)
+    if DEBUG:
+        cv2.imshow("D Closed", closed)
     blurred2 = cv2.GaussianBlur(closed, (7, 7), 0)
-    cv2.imshow("E Blurred", blurred2)
+    if DEBUG:
+        cv2.imshow("E Blurred", blurred2)
     return blurred2
 
 
@@ -191,7 +205,8 @@ def draw_contours_and_show(img_gray, contours, text, thickness=-1):
     img_color = cv2.cvtColor(img_gray, cv2.COLOR_GRAY2RGB)
     for i in range(len(contours)):
         cv2.drawContours(img_color, contours, i, (0, 0, 255), thickness)
-    cv2.imshow(text, img_color)
+    if DEBUG:
+        cv2.imshow(text, img_color)
 
 
 def med(img, m):
@@ -285,4 +300,8 @@ def average_variation(values):
 
 
 if __name__ == '__main__':
-    main(IMG_SRC)
+
+    for (a, b, files) in walk(IMG_SRC_DIR):
+        for filename in files:
+            print(IMG_SRC_DIR + '/' + filename)
+            main(IMG_SRC_DIR + '/' + filename)
