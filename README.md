@@ -39,7 +39,7 @@ We conclude that the method has a good result only in controlled environments.
 ## Authors
 
 * [Roberto Luiz Debarba](https://github.com/RobertoDebarba)
-* [Matheus Adriano Pereira](https://github.com/Itatakaru)
+* [Matheus Adriano Pereira](https://github.com/matheusPereiraKrumm)
 
 ## License
 
